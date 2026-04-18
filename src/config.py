@@ -16,10 +16,9 @@ def get_api_key() -> str | None:
 
 
 def render_sidebar_key_input() -> str | None:
-    """Render API key input in sidebar; returns current key or None."""
     key = get_api_key()
     if key:
-        st.success("API key loaded ✓", icon="🔑")
+        st.success("API key loaded")
         return key
 
     st.markdown("**FRED API Key**")

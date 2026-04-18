@@ -6,35 +6,37 @@ import plotly.graph_objects as go
 import plotly.express as px
 from scipy import stats
 
-# ── Design tokens ─────────────────────────────────────────────────────────────
+# ── Design tokens — one accent, flat, no gradients ───────────────────────────
 COLORS = {
-    "primary":    "#2563eb",
-    "secondary":  "#7c3aed",
-    "logistics":  "#0891b2",
-    "success":    "#059669",
-    "warning":    "#d97706",
-    "danger":     "#dc2626",
-    "neutral":    "#9ca3af",
-    "grid":       "#e5e7eb",
-    "bg":         "#ffffff",
-    "bg2":        "#f8fafc",
+    "accent":  "#1d4ed8",
+    "cyan":    "#0891b2",
+    "green":   "#16a34a",
+    "amber":   "#ca8a04",
+    "red":     "#dc2626",
+    "slate":   "#475569",
+    "teal":    "#0f766e",
+    "brown":   "#92400e",
+    "neutral": "#6b7280",
+    "grid":    "#e5e7eb",
+    "bg":      "#ffffff",
+    "bg2":     "#f9fafb",
 }
 
 CATEGORY_COLOR = {
-    "upstream":   COLORS["primary"],
-    "downstream": COLORS["secondary"],
-    "logistics":  COLORS["logistics"],
+    "upstream":   COLORS["accent"],
+    "downstream": COLORS["teal"],
+    "logistics":  COLORS["cyan"],
 }
 
 SERIES_PALETTE = [
-    COLORS["primary"],
-    COLORS["secondary"],
-    COLORS["logistics"],
-    COLORS["warning"],
-    COLORS["success"],
-    "#ec4899",
-    "#6366f1",
-    "#14b8a6",
+    COLORS["accent"],
+    COLORS["cyan"],
+    COLORS["green"],
+    COLORS["amber"],
+    COLORS["red"],
+    COLORS["slate"],
+    COLORS["teal"],
+    COLORS["brown"],
 ]
 
 _BASE_LAYOUT = dict(
@@ -44,7 +46,7 @@ _BASE_LAYOUT = dict(
     margin=dict(l=60, r=30, t=50, b=50),
     hovermode="x unified",
     legend=dict(
-        bgcolor="rgba(255,255,255,0.85)",
+        bgcolor=COLORS["bg2"],
         bordercolor=COLORS["grid"],
         borderwidth=1,
         font=dict(size=11),
@@ -72,35 +74,31 @@ def trend_chart(
     series = df[col].dropna()
     fig = go.Figure()
 
-    # Raw series — light dashed backdrop
     fig.add_trace(go.Scatter(
         x=series.index, y=series.values,
         mode="lines", name=series_name,
-        line=dict(color=COLORS["primary"], width=1.5, dash="dot"),
-        opacity=0.45,
+        line=dict(color=COLORS["accent"], width=1.5, dash="dot"),
+        opacity=0.4,
     ))
 
-    # 3-month MA
     ma3 = df.get(f"{col}_ma3")
     if ma3 is not None:
         ma3 = ma3.dropna()
         fig.add_trace(go.Scatter(
             x=ma3.index, y=ma3.values,
-            mode="lines", name="3-Month MA",
-            line=dict(color=COLORS["primary"], width=2),
+            mode="lines", name="3-month MA",
+            line=dict(color=COLORS["accent"], width=2),
         ))
 
-    # 12-month MA
     ma12 = df.get(f"{col}_ma12")
     if ma12 is not None:
         ma12 = ma12.dropna()
         fig.add_trace(go.Scatter(
             x=ma12.index, y=ma12.values,
-            mode="lines", name="12-Month MA",
-            line=dict(color=COLORS["secondary"], width=2.5),
+            mode="lines", name="12-month MA",
+            line=dict(color=COLORS["slate"], width=2.5),
         ))
 
-    # OLS regression over last `window_months`
     if add_regression and len(series) >= 12:
         recent = series.tail(window_months)
         x_num = np.arange(len(recent), dtype=float)
@@ -109,26 +107,26 @@ def trend_chart(
         fig.add_trace(go.Scatter(
             x=recent.index, y=trend_vals,
             mode="lines",
-            name=f"OLS Trend ({window_months}mo, R²={r_value**2:.2f})",
-            line=dict(color=COLORS["warning"], width=2, dash="dash"),
+            name=f"Trend ({window_months}mo, R²={r_value**2:.2f})",
+            line=dict(color=COLORS["amber"], width=2, dash="dash"),
         ))
 
     fig.update_layout(
-        title=dict(text=series_name, font=dict(size=15, color="#111827"), x=0),
+        title=dict(text=series_name, font=dict(size=14, color="#111827"), x=0),
         yaxis_title=unit,
         **_base_layout(),
     )
     return fig
 
 
-# ── Multi-series comparison chart ────────────────────────────────────────────
+# ── Multi-series comparison chart ─────────────────────────────────────────────
 def multi_series_chart(
     df: pd.DataFrame,
     cols: list[str],
     labels: dict[str, str] | None = None,
     category_map: dict[str, str] | None = None,
     normalize: bool = True,
-    title: str = "Supply Chain Index Comparison",
+    title: str = "",
 ) -> go.Figure:
     fig = go.Figure()
     labels = labels or {}
@@ -158,11 +156,11 @@ def multi_series_chart(
         ))
 
     if normalize:
-        fig.add_hline(y=100, line_dash="dash", line_color=COLORS["neutral"], line_width=1)
+        fig.add_hline(y=100, line_dash="dash", line_color=COLORS["grid"], line_width=1)
 
     fig.update_layout(
-        title=dict(text=title, font=dict(size=15), x=0),
-        yaxis_title="Normalized (start = 100)" if normalize else "",
+        title=dict(text=title, font=dict(size=14), x=0),
+        yaxis_title="Indexed to 100 at start" if normalize else "",
         **_base_layout(),
     )
     return fig
@@ -180,13 +178,13 @@ def correlation_heatmap(
         z=vals,
         x=display,
         y=display,
-        colorscale=[[0, "#dc2626"], [0.5, "#ffffff"], [1, "#2563eb"]],
+        colorscale=[[0, COLORS["red"]], [0.5, "#ffffff"], [1, COLORS["accent"]]],
         zmid=0, zmin=-1, zmax=1,
         text=vals,
         texttemplate="%{text:.2f}",
         textfont=dict(size=10),
         hovertemplate="<b>%{x}</b> vs <b>%{y}</b><br>r = %{z:.3f}<extra></extra>",
-        colorbar=dict(title="Pearson r", thickness=12),
+        colorbar=dict(title="r", thickness=12),
     ))
 
     layout = _base_layout()
@@ -194,7 +192,7 @@ def correlation_heatmap(
     layout.pop("yaxis", None)
     layout.pop("hovermode", None)
     fig.update_layout(
-        title=dict(text="Correlation Matrix — Supply Chain Inputs vs Outputs", font=dict(size=15), x=0),
+        title=dict(text="Correlation matrix", font=dict(size=14), x=0),
         height=480,
         xaxis=dict(tickfont=dict(size=10)),
         yaxis=dict(tickfont=dict(size=10), autorange="reversed"),
@@ -221,15 +219,15 @@ def lagged_correlation_chart(
             x=subset["lag_months"], y=subset["correlation"],
             mode="lines+markers", name=label,
             line=dict(color=color, width=2),
-            marker=dict(size=8, color=color),
+            marker=dict(size=7, color=color),
             hovertemplate=f"<b>{label}</b><br>Lag: %{{x}} mo<br>r = %{{y:.3f}}<extra></extra>",
         ))
 
-    fig.add_hline(y=0, line_dash="dash", line_color=COLORS["neutral"], line_width=1)
+    fig.add_hline(y=0, line_dash="dash", line_color=COLORS["grid"], line_width=1)
 
     fig.update_layout(
-        title=dict(text=f"Lagged Correlations → {target_name}", font=dict(size=15), x=0),
-        xaxis_title="Lag (months) — positive = source leads target",
+        title=dict(text=f"Lagged correlations — target: {target_name}", font=dict(size=14), x=0),
+        xaxis_title="Lag in months (positive = source leads target)",
         yaxis_title="Pearson r",
         xaxis=dict(tickvals=list(range(7))),
         **_base_layout(),
@@ -259,59 +257,55 @@ def anomaly_chart(
 
     fig = go.Figure()
 
-    # Confidence band
     combined_x = upper.index.tolist() + lower.index.tolist()[::-1]
     combined_y = upper.tolist() + lower.tolist()[::-1]
     fig.add_trace(go.Scatter(
         x=combined_x, y=combined_y,
         fill="toself",
-        fillcolor="rgba(37,99,235,0.07)",
+        fillcolor="rgba(29,78,216,0.06)",
         line=dict(color="rgba(0,0,0,0)"),
-        name=f"±{threshold:.1f}σ Band",
+        name=f"±{threshold:.1f}s band",
         hoverinfo="skip",
     ))
 
-    # Rolling mean
     fig.add_trace(go.Scatter(
         x=roll_mean.index, y=roll_mean.values,
-        mode="lines", name="Rolling Mean",
+        mode="lines", name="Rolling mean",
         line=dict(color=COLORS["neutral"], width=1.5, dash="dot"),
     ))
 
-    # Main series
     fig.add_trace(go.Scatter(
         x=series.index, y=series.values,
         mode="lines", name=series_name,
-        line=dict(color=COLORS["primary"], width=2),
+        line=dict(color=COLORS["accent"], width=2),
     ))
 
-    # Anomaly markers
     if len(anomalies) > 0:
         z_at = z[anomaly_mask]
-        marker_colors = [COLORS["danger"] if v > 0 else COLORS["warning"] for v in z_at]
+        marker_colors = [COLORS["red"] if v > 0 else COLORS["amber"] for v in z_at]
         fig.add_trace(go.Scatter(
             x=anomalies.index, y=anomalies.values,
-            mode="markers", name="Anomaly",
-            marker=dict(color=marker_colors, size=12, symbol="diamond",
+            mode="markers", name="Flag",
+            marker=dict(color=marker_colors, size=10, symbol="diamond",
                         line=dict(color="white", width=1.5)),
             text=[f"Z = {v:+.2f}" for v in z_at],
-            hovertemplate="<b>Anomaly</b><br>%{x|%b %Y}<br>Value: %{y:.2f}<br>%{text}<extra></extra>",
+            hovertemplate="<b>Flag</b><br>%{x|%b %Y}<br>Value: %{y:.2f}<br>%{text}<extra></extra>",
         ))
 
     fig.update_layout(
-        title=dict(text=f"Anomaly Detection — {series_name}", font=dict(size=15), x=0),
+        title=dict(text=series_name, font=dict(size=14), x=0),
         yaxis_title=unit,
         **_base_layout(),
     )
     return fig
 
 
-# ── YoY waterfall / bar chart ────────────────────────────────────────────────
+# ── YoY bar chart ─────────────────────────────────────────────────────────────
 def yoy_bar_chart(
     df: pd.DataFrame,
     cols: list[str],
     labels: dict[str, str] | None = None,
-    title: str = "Year-over-Year % Change",
+    title: str = "Year-over-year change",
 ) -> go.Figure:
     labels = labels or {}
     records = []
@@ -328,7 +322,7 @@ def yoy_bar_chart(
         return go.Figure()
 
     df_plot = pd.DataFrame(records).sort_values("yoy")
-    colors = [COLORS["danger"] if v > 0 else COLORS["success"] for v in df_plot["yoy"]]
+    colors = [COLORS["red"] if v > 0 else COLORS["green"] for v in df_plot["yoy"]]
 
     fig = go.Figure(go.Bar(
         x=df_plot["yoy"], y=df_plot["label"],
@@ -336,15 +330,15 @@ def yoy_bar_chart(
         marker_color=colors,
         text=[f"{v:+.1f}%" for v in df_plot["yoy"]],
         textposition="outside",
-        hovertemplate="<b>%{y}</b><br>YoY change: %{x:+.2f}%<extra></extra>",
+        hovertemplate="<b>%{y}</b><br>YoY: %{x:+.2f}%<extra></extra>",
     ))
-    fig.add_vline(x=0, line_color=COLORS["neutral"], line_width=1.5)
+    fig.add_vline(x=0, line_color=COLORS["grid"], line_width=1.5)
 
     layout = _base_layout()
     layout.pop("hovermode", None)
     fig.update_layout(
-        title=dict(text=title, font=dict(size=15), x=0),
-        xaxis_title="YoY % Change",
+        title=dict(text=title, font=dict(size=14), x=0),
+        xaxis_title="Year-over-year % change",
         height=max(280, 40 * len(records) + 80),
         showlegend=False,
         **layout,
